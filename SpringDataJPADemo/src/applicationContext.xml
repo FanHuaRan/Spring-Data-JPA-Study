@@ -21,7 +21,7 @@
      
     <description>Spring-Data-JPA配置学习</description>
     
-	<!--引入属性文件，在配置中占位使用 -->
+	<!--引入数据库连接池属性文件 -->
     <context:property-placeholder location="classpath*:db.properties" />
     
 	<!-- 配置C3P0连接池 -->
@@ -41,48 +41,55 @@
 		  <property name="breakAfterAcquireFailure" value="${c3p0.breakAfterAcquireFailure}"></property>
 		  <property name="testConnectionOnCheckout" value="${c3p0.testConnectionOnCheckout}"></property>
 	 </bean>
-	 
-	 <!-- JPA Entity Manager 配置 -->
+    
+    <!--使用声明式事务管理 -->
+    <!--定义事务管理器，由spring管理事务 -->
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">  
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>  
+    </bean>  
+    <!--支持注解驱动的事务管理，指定事务管理器 -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+    
+	<!--配置JPA对于Hibernate的适配器-->  
+    <bean id="hibernateJpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+        <property name="generateDdl" value="true"/>
+        <property name="database" value="MYSQL"/>
+        <property name="databasePlatform" value="org.hibernate.dialect.MySQLDialect"/>
+    </bean>
+  
+     <!--配置 JPA EntityManager工厂  -->
     <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <!-- 连接池属性 -->
         <property name="dataSource" ref="dataSource"/>
+        <!-- 适配器属性 -->
         <property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter"/>
+        <!-- 实体扫描包 -->
         <property name="packagesToScan" value="pers.fhr.sjpademo.entitys"/>
+        <!-- jpa属性 -->
         <property name="jpaProperties">
-            <props>
-                <!-- 命名规则 My_NAME->MyName -->
+        	<props>
+                <!-- 配置命名规则 如右：My_NAME->MyName -->
                 <prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+            	<!-- 显示SQL -->
+            	<prop key="hibernate.show_sql">true</prop>  
             </props>
         </property>
+        <!-- 配置JPA方言 -->
         <property name="jpaDialect">
             <bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect"/>
         </property>
     </bean>
-	
-    <bean id="hibernateJpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
-        <property name="generateDdl" value="true"/>
-        <property name="database" value="MYSQL"/>
-        <property name="databasePlatform" value="org.hibernate.dialect.MySQLInnoDBDialect"/>
-    </bean>
-  
-     <!-- Spring-Data-JPA 仓库配置 也就是我们的DAO，会根据Repository接口自动生成实现bean -->
-    <jpa:repositories base-package="pers.fhr.sjpademo.repositorys" transaction-manager-ref="transactionManager"
+    
+    <!-- JPA仓库配置 也就是DAO，会根据Repository接口自动生成实现bean,base-package是进行扫描的包 -->
+    <jpa:repositories base-package="pers.fhr.sjpademo.repositorys"
+    				  transaction-manager-ref="transactionManager"
                       entity-manager-factory-ref="entityManagerFactory"/>
-   
-    <!--声明式事务管理 -->
-    <!--定义事物管理器，由spring管理事务 -->
-    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-        <property name="dataSource" ref="dataSource"></property>
-    </bean>
-    
-    <!--支持注解驱动的事务管理，指定事务管理器 -->
-    <tx:annotation-driven transaction-manager="transactionManager"/>
-    
-    <!-- 扫描包 -->
-    <!-- 启用Spring注解 -->
+                      
+                      
+    <!-- 启用Spring上下文注解 -->
     <context:annotation-config />
     <!-- 扫描注解 将注解Bean进行注册 -->
-    <context:component-scan base-package="pers.fhr.mybatisdemo">
-   	 <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    <context:component-scan base-package="pers.fhr.sjpademo">
+   	  <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
     </context:component-scan>
-    
 </beans>
